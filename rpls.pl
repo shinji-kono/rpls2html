@@ -5,7 +5,7 @@ use Getopt::Std;
 
 my $version = "0.22";
 
-our($opt_g, $opt_d,$opt_h, $opt_r,$opt_s);
+our($opt_g, $opt_d,$opt_h, $opt_r,$opt_s, $opt_f);
 getopts('gdhrs');
 
 my $html_mode = 1;
@@ -20,6 +20,7 @@ if ($opt_h) {
 $0 : decode *.rpls and genetate html
    -g  debug mode
    -d  show detail
+   -f  show file
    -s  simple mode, no html tag
    -r  recursive mode via find -s
    -h  show tnis
