@@ -5,12 +5,27 @@ use Getopt::Std;
 
 my $version = "0.22";
 
-our($opt_g, $opt_d,$opt_f,$opt_h, $opt_r);
-getopts('gdfhr');
+our($opt_g, $opt_d,$opt_h, $opt_r,$opt_s);
+getopts('gdhrs');
 
+my $html_mode = 1;
 my $detail = $opt_d;
 my $show_file = $opt_f;
 my $idid = "id000000";
+
+$html_mode = 0 if ($opt_s);
+
+if ($opt_h) {
+    print << "EOFEOF";
+$0 : decode *.rpls and genetate html
+   -g  debug mode
+   -d  show detail
+   -s  simple mode, no html tag
+   -r  recursive mode via find -s
+   -h  show tnis
+EOFEOF
+    exit 0;
+}
 
 open(OUT,"| nkf -wZ");
 select OUT;
@@ -23,7 +38,7 @@ my @detail;
 
 my $both = 0;
 
-opening() if ($opt_h) ;
+opening() if ($html_mode) ;
 
 my @v;
 
@@ -50,7 +65,7 @@ for my $arg (@v) {
 }
 
 
-closing() if ($opt_h) ;
+closing() if ($html_mode) ;
 close OUT;
 
 exit 0;
@@ -98,7 +113,7 @@ sub video {
     # thumbnail of DVD Video
     &checkdir($file);
     my $txt = $dir."title.txt";
-    if ($opt_h) {
+    if ($html_mode) {
         print "<p> $dir <a href=\"$file\"> <img src=\"$file\" height=\"200\" style=\"vertical-align: top\"> </a>\n";
     }
     print "$file \n" if ($show_file);
@@ -161,7 +176,7 @@ sub rpls {
         print unpack("H*",substr($buf,0x59,$tilen)),"\n";
         print unpack("H*",$ti),"\n";
     }
-    if ($opt_h) {
+    if ($html_mode) {
         my $mts =  substr($buf,0x63c,9);
         $mts = &findMts($mts,$file);
         if (-f $mts) {
@@ -180,18 +195,18 @@ sub rpls {
     # my $offset = 0x59;
     # print &string($buf,$offset);
 
-    print $ti if (! $opt_h);
+    print $ti if (! $html_mode);
 
     my $s;
     my $offset = 0x159;
 
     my $abst =  &string($buf, $offset);
 
-    if ($detail || $opt_h) {
+    if ($detail || $html_mode) {
         # print "\n\n",0x159," $offset\n";
 
         my $rest = &string1(substr($buf,$offset,0x600-$offset));
-        if ($opt_h) {
+        if ($html_mode) {
             &detail('*',$rest);
             print "$abst\n\n";
         } else {
@@ -352,7 +367,17 @@ sub string1 {
                print "ord ",sprintf("%x",$i)," $gr\n" if ($opt_g);
                s/^.//;
                if ($om eq 'A') { $s .= $kin; $om = 'J'; }
-               $s .= chr(0x25).chr($i-0x80);
+               if ($i == 0xf7) { $s .= chr(0x21).chr(0x33); }
+               elsif ($i == 0xf8) { $s .= chr(0x21).chr(0x34); }
+               elsif ($i == 0xf9) { $s .= chr(0x21).chr(0x3c); }
+               elsif ($i == 0xfa) { $s .= chr(0x21).chr(0x23); }
+               elsif ($i == 0xfb) { $s .= chr(0x21).chr(0x56); }
+               elsif ($i == 0xfc) { $s .= chr(0x21).chr(0x57); }
+               elsif ($i == 0xfd) { $s .= chr(0x21).chr(0x22); }
+               elsif ($i == 0xfe) { $s .= chr(0x21).chr(0x26); }
+               else {
+                     $s .= chr(0x25).chr($i-0x80);
+               }
                next;
             } elsif ($gr ne 'I') {
                print "ord ",$i," $gr\n" if ($opt_g);
@@ -489,7 +514,7 @@ sub ttdetail {
         # print "$year/$month/$day\n"; #  $hour:$min:$sec\n";
         if ($both==3) {
             if ($title[$i]) {
-                if ($opt_h) {
+                if ($html_mode) {
                     if (-f $mov) {
                         my $size = -s $mov;
                         print "<p>$dir1<a href=\"$mov\"> $title[$i] </a> ";
@@ -604,7 +629,7 @@ sub dvdtitle {
         }
         if ($both==3) {
             if ($detail[$i]) {
-                if ($opt_h) {
+                if ($html_mode) {
                     if (-f $mov) {
                         my $size = -s $mov;
                         print "<p>$dir1 <a href=\"$mov\"> $title </a> ";
@@ -630,7 +655,7 @@ sub dvdtitle {
                 $title[$i] = "$title\t$dstr\n";
             }
         } else {
-            if ($opt_h) {
+            if ($html_mode) {
                 if (-f $mov) {
                     my $size = -s $mov;
                     print "<p>$dir1 <a href=\"$mov\"> $title </a> $dstr\n";
@@ -672,15 +697,12 @@ a#info:hover span{ /*the span will display just on :hover state*/
 </STYLE>
 <body>
 RogueRogue
-# <!--入口--->
 }
 
 
 sub closing {
     printf "</body></html>\n";
 }
-
-
 
 1;
 
@@ -714,7 +736,7 @@ Shinji KONO, E<lt>kono@ie.u-ryukyu.ac.jpE<gt>
 
   rpls.pl -- Display title/description of DVD / BD-R
 
-  Copyright (C) 2012  Shinji Kono
+  Copyright (C) 2012,2021  Shinji Kono
 
     Everyone is permitted to do anything on this program 
     including copying, modifying, improving,
